@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eleições 2026 · Painel do 1º turno</title>
+  <meta name="description" content="Resultado do 1º turno das eleições gerais de 2026 no Brasil: presidente, governadores, senadores e deputados, do país ao município e à zona eleitoral. Dados oficiais do TSE.">
+  <meta property="og:title" content="Eleições 2026 · Painel do 1º turno">
+  <meta property="og:description" content="Do Brasil ao município: presidente, governador, senador e deputados, com dados oficiais do TSE.">
+  <meta name="theme-color" content="#e9e8ef">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23111'/%3E%3Crect x='7' y='16' width='4' height='9' rx='2' fill='%23e0313a'/%3E%3Crect x='14' y='9' width='4' height='16' rx='2' fill='%233b5fd9'/%3E%3Crect x='21' y='13' width='4' height='12' rx='2' fill='%23ef9f1c'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topo">
+      <a class="marca" href="#cargo=1" aria-label="Eleições 2026 — início">
+        <span class="marca-selo" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="marca-txt"><strong>Eleições 2026</strong><small>1º turno · 4 de outubro</small></span>
+      </a>
+      <nav id="cargos" class="abas" role="tablist" aria-label="Cargo"></nav>
+      <div class="topo-dir">
+        <div class="seg seg-vista" role="group" aria-label="Visualização">
+          <button type="button" data-vista="painel">Painel</button>
+          <button type="button" data-vista="tabelas">Tabelas</button>
+        </div>
+        <div class="tema-menu">
+          <button id="btn-tema" class="btn-redondo" type="button" aria-label="Escolher tema" aria-haspopup="true" aria-expanded="false" title="Tema">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01a1.5 1.5 0 0 1 1.12-2.49H16a5 5 0 0 0 5-5c0-4.42-4.03-8-9-8Zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z"/></svg>
+          </button>
+          <div id="tema-opcoes" class="tema-opcoes" role="menu" hidden>
+            <button type="button" role="menuitemradio" data-tema="light"><i class="amostra amostra-claro"></i>Claro</button>
+            <button type="button" role="menuitemradio" data-tema="dark"><i class="amostra amostra-escuro"></i>Escuro</button>
+            <button type="button" role="menuitemradio" data-tema="brasil"><i class="amostra amostra-brasil"></i>Brasil</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===================== VISTA PAINEL ===================== -->
+    <main id="vista-painel" class="conteudo">
+      <section id="kpis" class="kpis" aria-label="Indicadores"></section>
+
+      <section class="card card-mapa" aria-label="Mapa">
+        <div class="mapa-lado">
+          <nav id="trilha" class="trilha" aria-label="Navegação"></nav>
+          <h2 id="mapa-titulo" class="card-tit">Mais votado por município</h2>
+          <p id="mapa-sub" class="card-sub">Clique no mapa para descer de nível</p>
+
+          <div class="filtros">
+            <label class="campo"><span class="rot">Região</span><select id="sel-reg"></select></label>
+            <label class="campo"><span class="rot">Estado</span><select id="sel-uf"></select></label>
+            <div class="campo campo-busca">
+              <span class="rot">Candidato</span>
+              <input id="busca-mun" type="search" placeholder="Nome do candidato" autocomplete="off" aria-label="Buscar candidato por nome" role="combobox" aria-controls="busca-mun-lista">
+              <ul id="busca-mun-lista" class="sugestoes" role="listbox" hidden></ul>
+            </div>
+            <label class="campo campo-partido"><span class="rot">Partido</span><select id="sel-partido"></select></label>
+            <div class="seg seg-modo" role="group" aria-label="O que o mapa mostra">
+              <button type="button" data-modo="vencedor">Mais votado</button>
+              <button type="button" data-modo="abstencao">Abstenção</button>
+            </div>
+          </div>
+
+          <div id="legenda" class="legenda"></div>
+        </div>
+
+        <div id="mapa" class="mapa">
+          <div id="tooltip" class="tooltip" role="status"></div>
+          <div class="carregador" aria-hidden="true"><span></span></div>
+          <button id="btn-voltar" class="btn-voltar" type="button" hidden>
+            <span class="btn-voltar-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></svg>
+            </span>
+            <span id="btn-voltar-txt">Voltar</span>
+          </button>
+          <div class="zoom-ctrl">
+            <button id="btn-recentrar" type="button" title="Recentralizar" aria-label="Recentralizar mapa">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+            </button>
+            <button id="btn-zoom-mais" type="button" aria-label="Aproximar">+</button>
+            <button id="btn-zoom-menos" type="button" aria-label="Afastar">−</button>
+          </div>
+        </div>
+      </section>
+
+      <aside id="painel" class="card painel" aria-live="polite">
+        <header class="painel-cab">
+          <div>
+            <h2 id="painel-titulo" class="card-tit">Brasil</h2>
+            <p id="painel-sub" class="card-sub">Carregando…</p>
+          </div>
+          <div class="seg seg-painel" role="group" aria-label="Modo do painel">
+            <button type="button" data-painel="resumo">Resumo</button>
+            <button type="button" data-painel="rank">Ranking</button>
+          </div>
+        </header>
+        <div id="painel-corpo" class="painel-corpo"></div>
+      </aside>
+    </main>
+
+    <!-- ===================== VISTA TABELAS ===================== -->
+    <main id="vista-tabelas" class="conteudo-tabelas" hidden>
+      <section class="card card-tabela">
+        <header class="tabela-cab">
+          <div>
+            <h2 class="card-tit">Resultado por zona eleitoral</h2>
+            <p id="tabela-sub" class="card-sub"></p>
+          </div>
+          <div class="filtros filtros-tabela">
+            <label class="campo"><span class="rot">Estado</span><select id="tab-uf"></select></label>
+            <label class="campo"><span class="rot">Município</span><select id="tab-mun"></select></label>
+            <label class="campo"><span class="rot">Buscar</span><input id="tab-busca" type="search" placeholder="Zona ou município"></label>
+            <button id="tab-csv" class="btn-pilula" type="button">Baixar CSV</button>
+          </div>
+        </header>
+        <div id="tabela-corpo" class="tabela-corpo"></div>
+      </section>
+    </main>
+
+    <footer class="rodape">
+      <p><strong>Fonte:</strong> Tribunal Superior Eleitoral — API de divulgação de resultados e Portal de Dados Abertos · Malha municipal: IBGE · <span id="atualizado"></span></p>
+      <p>Painel desenvolvido por <strong>Aluisio</strong> · Python + D3.js · <a href="https://github.com/" id="link-repo" target="_blank" rel="noopener">código no GitHub</a></p>
+    </footer>
+  </div>
+
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Dados brutos e intermediários (≈ 420 MB) — reprodutíveis com os scripts
+dados/brutos/
+dados/processados/
+
+# Ambiente local
+.claude/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
