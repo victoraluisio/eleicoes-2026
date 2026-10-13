@@ -58,13 +58,13 @@ export const el = (tag, attrs = {}, ...filhos) => {
 
 export const reduzMovimento = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// Conta de 0 até o valor final (números do painel)
-export function contar(elemento, alvo, formato = int, duracao = 900) {
-  if (reduzMovimento()) { elemento.textContent = formato(alvo); return; }
+// Conta de `de` (0 por padrão) até o valor final — no modo ao vivo, parte do valor anterior
+export function contar(elemento, alvo, formato = int, duracao = 900, de = 0) {
+  if (reduzMovimento() || de === alvo) { elemento.textContent = formato(alvo); return; }
   const ini = performance.now();
   const passo = (t) => {
     const p = Math.min(1, (t - ini) / duracao);
-    elemento.textContent = formato(alvo * d3.easeCubicOut(p));
+    elemento.textContent = formato(de + (alvo - de) * d3.easeCubicOut(p));
     if (p < 1) requestAnimationFrame(passo);
   };
   requestAnimationFrame(passo);

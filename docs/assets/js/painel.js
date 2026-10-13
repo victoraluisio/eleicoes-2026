@@ -47,8 +47,8 @@ function numero(alvo, fmt = int) {
 const fmt1 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmt2 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** Número grande com unidade pequena: 158,7 mi · 78,92 % */
-function grande(n, tipo) {
+/** Número grande com unidade pequena: 158,7 mi · 78,92 % (anima a partir de `de`) */
+function grande(n, tipo, de = 0) {
   const v = el("span", {}, "0");
   let alvo = n, unidade = "", f = (x) => fmt2.format(x);
   if (tipo === "pessoas") {
@@ -56,7 +56,8 @@ function grande(n, tipo) {
     else if (n >= 1e4) { alvo = n / 1e3; unidade = "mil"; f = (x) => fmt1.format(x); }
     else f = int;
   } else unidade = "%";
-  contar(v, alvo, f);
+  const escala = alvo / (n || 1);   // mesma unidade para o valor anterior
+  contar(v, alvo, f, 900, tipo === "pessoas" ? de * escala : de);
   return el("span", { class: "kpi-val" }, v, el("small", {}, unidade));
 }
 
@@ -65,18 +66,36 @@ export function montarKPIs(alvo, estado) {
   const t = mun ? totaisMun(mun) : uf ? bloco(cargo, uf)?.totais : reg ? blocoRegiao(cargo, reg).totais : bloco(cargo, "br")?.totais;
   if (!t) return alvo.replaceChildren();
   const onde = mun ? "no município" : uf ? "no estado" : reg ? "na região" : "no Brasil";
+  desenharKPIs(alvo, t, onde, { chave: `1|${cargo}|${reg}|${uf}|${mun}` });
+}
+
+/**
+ * Cartões do topo a partir de um bloco de totais. Mesma `chave` da última pintura =
+ * atualização ao vivo: sem animação de entrada e números saindo do valor anterior.
+ */
+export function desenharKPIs(alvo, t, onde, { chave, aoVivo = false } = {}) {
+  const suave = alvo.dataset.chave === chave;
+  const antes = suave ? alvo._valores || [] : [];
+  alvo.dataset.chave = chave;
+  alvo.classList.toggle("sem-entrada", suave);
   // % sobre o total de votos (no Senado cada eleitor vota duas vezes)
   const totalVotos = t.validos + t.brancos + t.nulos;
   const pB = (t.brancos / totalVotos) * 100, pN = (t.nulos / totalVotos) * 100;
+  const bn = totalVotos ? pB + pN : 0;
+  const valores = [t.eleitorado, t.pComparecimento, t.pAbstencao, bn];
+  alvo._valores = valores;
+  const apurado = t.pApuradas >= 100 && !aoVivo
+    ? el("span", { class: "pilula verde" }, `✓ ${pct(t.pApuradas)} apurado`)
+    : t.pApuradas != null ? el("span", { class: `pilula ${t.pApuradas >= 100 ? "verde" : "ambar"}` }, `${t.pApuradas >= 100 ? "✓" : "⏱"} ${pct(t.pApuradas)} apurado`)
+      : el("span", { class: "pilula" }, "1º turno");
   const cards = [
-    ["Eleitorado", `Aptos a votar ${onde}`, grande(t.eleitorado, "pessoas"),
-      t.pApuradas != null ? el("span", { class: "pilula verde" }, `✓ ${pct(t.pApuradas)} apurado`) : el("span", { class: "pilula" }, "1º turno")],
-    ["Comparecimento", "Eleitores que votaram", grande(t.pComparecimento, "pct"),
+    ["Eleitorado", `Aptos a votar ${onde}`, grande(t.eleitorado, "pessoas", antes[0]), apurado],
+    ["Comparecimento", "Eleitores que votaram", grande(t.pComparecimento, "pct", antes[1]),
       el("span", { class: "pilula verde" }, `↗ ${compacto(t.comparecimento)}`)],
-    ["Abstenção", "Não foram às urnas", grande(t.pAbstencao, "pct"),
+    ["Abstenção", "Não foram às urnas", grande(t.pAbstencao, "pct", antes[2]),
       el("span", { class: "pilula rosa" }, `↘ ${compacto(t.abstencao)}`)],
-    ["Brancos e nulos", "Sobre o total de votos", grande(pB + pN, "pct"),
-      el("span", { class: "pilula" }, `${pct(pB)} · ${pct(pN)}`)],
+    ["Brancos e nulos", "Sobre o total de votos", grande(bn, "pct", antes[3]),
+      el("span", { class: "pilula" }, `${pct(totalVotos ? pB : 0)} · ${pct(totalVotos ? pN : 0)}`)],
   ];
   alvo.replaceChildren(...cards.map(([tit, sub, val, pil], i) =>
     el("article", { class: "kpi", style: { "--i": i } },

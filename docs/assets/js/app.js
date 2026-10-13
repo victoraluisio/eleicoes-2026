@@ -4,15 +4,18 @@ import {
   db, carregarBase, garantirCargo, garantirUF, resultadoMun, fatiaPartidoMun, ufDoMun, partidosOrdenados, bloco,
   blocoRegiao, fatiaPartidoRegiao, fatiaPartidoUF, rankingEscopo,
 } from "./dados.js";
-import { montarPainel, montarKPIs, montarRanking } from "./painel.js";
+import { montarPainel, montarKPIs, montarRanking, desenharKPIs } from "./painel.js";
+import { montarPainel2 } from "./painel2.js";
+import { AoVivo, SIMULANDO, agregar } from "./aovivo.js";
 import { montarTabelas, baixarCSV } from "./tabelas.js";
 import { CARGOS, UFS, REGIOES, REGIAO_DA_UF, cargoInfo, el, int, pct, compacto, semAcento } from "./util.js";
 
 // ------------------------------------------------------------------ estado + URL
-const estado = { cargo: 1, reg: null, uf: null, mun: null, partido: null, modo: "vencedor", vista: "painel", painel: "resumo" };
+const estado = { turno: 1, cargo: 1, reg: null, uf: null, mun: null, partido: null, modo: "vencedor", vista: "painel", painel: "resumo" };
 
 function lerURL() {
   const q = new URLSearchParams(location.hash.slice(1));
+  estado.turno = q.get("t") === "2" ? 2 : 1;
   const cargo = +q.get("cargo");
   estado.cargo = CARGOS.some((c) => c.id === cargo) ? cargo : 1;
   estado.uf = UFS[q.get("uf")] ? q.get("uf") : null;
@@ -26,6 +29,7 @@ function lerURL() {
 
 function escreverURL() {
   const q = new URLSearchParams();
+  if (estado.turno === 2) q.set("t", "2");
   q.set("cargo", estado.cargo);
   if (estado.reg && !estado.uf) q.set("reg", estado.reg);
   if (estado.uf) q.set("uf", estado.uf);
@@ -63,6 +67,7 @@ async function ir(mudancas = {}) {
   if ("reg" in mudancas && mudancas.reg !== antes.reg && !("uf" in mudancas)) { estado.uf = null; estado.mun = null; }
   if ("uf" in mudancas && mudancas.uf !== antes.uf && !("mun" in mudancas)) estado.mun = null;
   if (estado.uf) estado.reg = REGIAO_DA_UF[estado.uf];
+  if (estado.turno === 2 && ![1, 3].includes(estado.cargo)) estado.cargo = 1;   // 2º turno: só Presidente e Governador
   escreverURL();
   atualizarControles();
   tip().classList.remove("visivel");
@@ -70,13 +75,16 @@ async function ir(mudancas = {}) {
   $("#vista-painel").hidden = estado.vista !== "painel";
   $("#vista-tabelas").hidden = estado.vista !== "tabelas";
   if (estado.vista === "tabelas") { await montarTabelas(estado); return; }
+  if (estado.turno === 2) return irTurno2(antes);
+  if (av?.ligado) av.parar();
 
   document.body.classList.add("carregando");
   await garantirCargo(estado.cargo);
   if (estado.uf) await garantirUF(estado.uf);
   document.body.classList.remove("carregando");
 
-  const mudouLugar = estado.reg !== antes.reg || estado.uf !== antes.uf || estado.mun !== antes.mun || antes.vista !== "painel";
+  const mudouLugar = estado.reg !== antes.reg || estado.uf !== antes.uf || estado.mun !== antes.mun
+    || antes.vista !== "painel" || antes.turno !== estado.turno;
   if (mudouLugar || primeiraPintura) mapa.focar(estado.reg, estado.uf, estado.mun);
   const mudouMapa = mudouLugar || primeiraPintura || estado.cargo !== antes.cargo
     || estado.partido !== antes.partido || estado.modo !== antes.modo;
@@ -89,6 +97,147 @@ function subir() {
   if (estado.mun) ir({ mun: null });
   else if (estado.uf) ir({ uf: null });
   else if (estado.reg) ir({ reg: null });
+}
+
+// ------------------------------------------------------------------ 2º turno (ao vivo)
+let av = null;
+
+async function irTurno2(antes) {
+  if (!av) av = new AoVivo({ municipios: db.municipios, aoAtualizar: () => pintarTurno2(false) });
+  av.focar(estado.cargo, estado.uf);
+  if (!av.ligado) av.iniciar();   // o primeiro ciclo chama pintarTurno2 ao terminar
+  const mudouLugar = estado.reg !== antes.reg || estado.uf !== antes.uf || estado.mun !== antes.mun
+    || antes.vista !== "painel" || antes.turno !== estado.turno || primeiraPintura;
+  if (mudouLugar) mapa.focar(estado.reg, estado.uf, estado.mun);
+  primeiraPintura = false;
+  pintarTurno2(true);
+}
+
+/** Bloco do recorte atual no 2º turno; governador fora da UF = soma das UFs em disputa (só totais). */
+function blocoTurno2() {
+  const { cargo, reg, uf, mun } = estado;
+  if (cargo === 3 && !uf) {
+    return agregar(av.ufsCargo[3].filter((u) => !reg || REGIOES[reg].ufs.includes(u)).map((u) => av.bloco(3, { uf: u })));
+  }
+  return av.bloco(cargo, { reg, uf, mun });
+}
+
+function pintarTurno2(mudouTela) {
+  if (estado.turno !== 2 || estado.vista !== "painel" || !av) return;
+  const { cargo, uf, mun, reg } = estado;
+  mapa.colorir(corDoMunT2, { varredura: false });
+  desenharLegendaT2();
+  const b = blocoTurno2();
+  const onde = mun ? "no município" : uf ? "no estado" : reg ? "na região" : "no Brasil";
+  if (b) desenharKPIs($("#kpis"), b.totais, onde, { chave: `2|${cargo}|${reg}|${uf}|${mun}`, aoVivo: true });
+  else if (mudouTela) $("#kpis").replaceChildren();
+  $("#painel-titulo").textContent = mun ? `${db.municipios[mun][0]} · ${uf.toUpperCase()}` : uf ? UFS[uf][0] : reg ? `Região ${REGIOES[reg].nome}` : "Brasil";
+  const hora = av.ultimoOk ? av.ultimoOk.toLocaleTimeString("pt-BR") : null;
+  $("#painel-sub").textContent = `${cargoInfo(cargo).nome} · 2º turno · `
+    + (av.erro && hora ? `sem resposta do TSE — mostrando dados das ${hora}` : hora ? `atualizado às ${hora}` : "conectando ao TSE…");
+  montarPainel2($("#painel-corpo"), estado, av, { ir });
+  atualizarSelo(b);
+}
+
+function atualizarSelo(b) {
+  const selo = $("#selo-vivo");
+  selo.hidden = estado.turno !== 2;
+  if (selo.hidden) return;
+  const final = b?.totais.finalizado && b.totais.pApuradas >= 100;
+  selo.className = `selo-vivo ${av?.erro ? "erro" : final ? "final" : ""}`;
+  $("#selo-vivo-txt").textContent = SIMULANDO ? "Simulação" : av?.erro ? "Sem conexão" : final ? "Resultado final" : "Ao vivo";
+}
+
+function corDoMunT2(ibge) {
+  const { cargo, modo } = estado;
+  const uf = ufDoMun(ibge);
+  if (cargo === 3 && !av.temSegundoTurno(3, uf)) return null;
+  const b = av.dados[cargo].mun[ibge] || av.dados[cargo].uf[uf];
+  if (!b || !b.totais.secoesApuradas) return null;
+  const sup = css("--superficie-mapa");
+  if (modo === "abstencao") {
+    const t = (b.totais.pAbstencao - 10) / 30;
+    return d3.interpolateLab(sup, css("--seq-forte"))(0.12 + 0.88 * Math.max(0, Math.min(1, t)));
+  }
+  const lider = b.candidatos[0];
+  if (!b.totais.validos || !lider) return null;
+  return intensidade(corPartido(lider.partido), (lider.pct - 50) / 20, sup);
+}
+
+function desenharLegendaT2() {
+  const { cargo, uf, modo } = estado;
+  const leg = $("#legenda");
+  const sup = css("--superficie-mapa");
+  const gradiente = (cor, ini = 0.28) => `linear-gradient(90deg, ${d3.range(0, 1.01, 0.1)
+    .map((t) => d3.interpolateLab(sup, cor)(ini + (1 - ini) * t)).join(",")})`;
+  $("#mapa-titulo").textContent = modo === "abstencao" ? "Abstenção · 2º turno" : "Quem lidera · 2º turno";
+  $("#mapa-sub").textContent = uf
+    ? "Municípios aparecem conforme a apuração avança"
+    : "Cor por estado; abra um estado para ver os municípios";
+  if (modo === "abstencao") {
+    leg.replaceChildren(el("span", { class: "leg-tit" }, "Abstenção", el("small", {}, "Percentual do eleitorado")),
+      el("div", { class: "leg-grad", style: { background: gradiente(css("--seq-forte"), 0.12) } }),
+      el("div", { class: "leg-esc" }, el("span", {}, "≤10%"), el("span", {}, "≥40%")));
+    return;
+  }
+  // quem lidera em quantas unidades (municípios na UF aberta; estados acima disso)
+  const cont = new Map();
+  const unidades = uf
+    ? Object.entries(av.dados[cargo].mun).filter(([ibge]) => ufDoMun(ibge) === uf).map(([, b]) => b)
+    : (cargo === 1 ? Object.keys(UFS) : av.ufsCargo[3]).filter((u) => !estado.reg || REGIOES[estado.reg].ufs.includes(u))
+      .map((u) => av.dados[cargo].uf[u]);
+  for (const b of unidades) {
+    const c = b?.totais.validos ? b.candidatos[0] : null;
+    if (c) cont.set(c.n, { c, n: (cont.get(c.n)?.n || 0) + 1 });
+  }
+  const itens = [...cont.values()].sort((a, b) => b.n - a.n);
+  leg.replaceChildren(
+    el("span", { class: "leg-tit" }, uf ? "Municípios liderados" : "Estados liderados",
+      el("small", {}, itens.length ? "conta só onde já há votos apurados" : "aguardando os primeiros votos")),
+    el("ul", { class: "leg-itens" }, itens.map(({ c, n }) => el("li", { class: "leg-item" },
+      el("i", { style: { background: corPartido(c.partido) } }), c.nome, el("span", {}, int(n))))),
+    el("div", { class: "leg-int" }, el("span", {}, "50%"),
+      el("div", { class: "leg-grad", style: { background: gradiente(css("--tinta-2")) } }), el("span", {}, "70%+")),
+    el("small", { class: "card-sub", style: { marginTop: "-4px" } }, "Intensidade da cor = % do líder"));
+}
+
+function mostrarTooltipT2(ibge, ev, tipo) {
+  const { cargo } = estado;
+  const uf = ufDoMun(ibge), reg = REGIAO_DA_UF[uf];
+  const [nome] = db.municipios[ibge] || ["?"];
+  let b, titulo;
+  if (tipo === "reg") { titulo = `Região ${REGIOES[reg].nome}`; b = cargo === 1 ? av.bloco(1, { reg }) : null; }
+  else if (tipo === "uf") { titulo = UFS[uf][0]; b = av.bloco(cargo, { uf }); }
+  else { titulo = `${nome} · ${uf.toUpperCase()}`; b = av.bloco(cargo, { mun: ibge }); }
+  const linhas = [];
+  if (cargo === 3 && tipo !== "reg" && !av.temSegundoTurno(3, uf)) linhas.push(el("span", { class: "tt-dica" }, "Sem 2º turno para governador"));
+  else if (cargo === 3 && tipo === "reg") {
+    const n = av.ufsCargo[3].filter((u) => REGIOES[reg].ufs.includes(u)).length;
+    linhas.push(el("span", { class: "tt-dica" }, n ? `${n} estado${n > 1 ? "s" : ""} com 2º turno` : "Nenhum estado com 2º turno"));
+  } else if (!b || !b.totais.secoesApuradas) linhas.push(el("span", { class: "tt-dica" }, "Apuração ainda não começou aqui"));
+  else {
+    for (const c of b.candidatos.slice(0, 2)) {
+      linhas.push(el("div", { class: "tt-linha" },
+        el("span", { class: "tt-rot" }, el("span", { class: "chip", style: { "--c": corPartido(c.partido) } }, c.partido), ` ${c.nome}`),
+        el("b", {}, pct(c.pct))),
+      el("div", { class: "tt-barra" }, el("i", { style: { width: `${c.pct}%`, background: corPartido(c.partido) } })));
+    }
+    linhas.push(el("span", { class: "tt-dica" }, `${pct(b.totais.pApuradas)} das seções apuradas`));
+  }
+  const dica = { reg: "Clique para abrir a região", uf: "Clique para abrir o estado", mun: "Clique para ver o município" }[tipo];
+  posicionarTooltip(ev, [el("strong", { class: "tt-tit" }, titulo), ...linhas, el("span", { class: "tt-dica" }, dica)]);
+}
+
+function posicionarTooltip(ev, conteudo) {
+  const t = tip();
+  t.replaceChildren(...conteudo);
+  const caixa = $("#mapa").getBoundingClientRect();
+  let x = ev.clientX - caixa.left + 16, y = ev.clientY - caixa.top + 16;
+  t.classList.add("visivel");
+  const { width: w, height: h } = t.getBoundingClientRect();
+  if (x + w > caixa.width - 8) x = ev.clientX - caixa.left - w - 16;
+  if (y + h > caixa.height - 8) y = ev.clientY - caixa.top - h - 16;
+  t.style.transform = `translate(${Math.max(4, x)}px, ${Math.max(4, y)}px)`;
 }
 
 // ------------------------------------------------------------------ mapa
@@ -193,6 +342,7 @@ function linhasBloco(b) {
 }
 
 function mostrarTooltip(ibge, ev, tipo = "mun") {
+  if (estado.turno === 2) return mostrarTooltipT2(ibge, ev, tipo);
   const { cargo, partido, modo } = estado;
   const t = tip();
   const sgUF = ufDoMun(ibge);
@@ -247,6 +397,9 @@ async function atualizarPainel() {
   const b = blocoEscopo(cargo);
   $("#painel-titulo").textContent = titulo;
   $("#painel-sub").textContent = `${uf === "df" && cargo === 7 ? "Deputado Distrital" : info.nome} · ${pct(b.totais.pApuradas)} das seções apuradas`;
+  // vindo do modo ao vivo: volta a animar a entrada dos blocos
+  $("#painel-corpo").classList.remove("sem-entrada");
+  delete $("#painel-corpo").dataset.chave;
   if (estado.painel === "rank") {
     const nomeCargo = uf === "df" && cargo === 7 ? "Deputado Distrital" : info.nome;
     await montarRanking($("#painel-corpo"), estado, { titulo: `Ranking · ${nomeCargo}`, busca: buscaRanking });
@@ -350,6 +503,7 @@ function montarControles() {
   document.querySelectorAll("[data-modo]").forEach((b) => (b.onclick = () => ir({ modo: b.dataset.modo, partido: b.dataset.modo === "abstencao" ? null : estado.partido })));
   document.querySelectorAll("[data-vista]").forEach((b) => (b.onclick = () => ir({ vista: b.dataset.vista })));
   document.querySelectorAll("[data-painel]").forEach((b) => (b.onclick = () => ir({ painel: b.dataset.painel })));
+  document.querySelectorAll("[data-turno]").forEach((b) => (b.onclick = () => ir({ turno: +b.dataset.turno, partido: null, painel: "resumo" })));
 
   // tabelas
   $("#tab-uf").onchange = (e) => ir({ uf: e.target.value, mun: null });
@@ -388,6 +542,13 @@ function atualizarControles() {
   document.querySelectorAll("[data-modo]").forEach((b) => b.setAttribute("aria-pressed", !partido && b.dataset.modo === modo));
   document.querySelectorAll("[data-vista]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.vista === vista));
   document.querySelectorAll("[data-painel]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.painel === estado.painel));
+  // 2º turno: só Presidente e Governador; partido, busca e ranking não se aplicam
+  const t2 = estado.turno === 2;
+  document.querySelectorAll("[data-turno]").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.turno === estado.turno));
+  document.querySelectorAll(".aba").forEach((b) => (b.hidden = t2 && ![1, 3].includes(+b.dataset.cargo)));
+  for (const s of [".campo-partido", ".campo-busca", ".seg-painel"]) $(s).hidden = t2;
+  document.body.classList.toggle("turno2", t2);
+  if (!t2) $("#selo-vivo").hidden = true;
 
   const { reg } = estado;
   const trilha = [el("button", { type: "button", onclick: () => ir({ reg: null }), "aria-current": !reg ? "page" : null }, "Brasil")];
@@ -410,7 +571,7 @@ function aplicarTema(t) {
 function escolherTema(t) {
   aplicarTema(t);
   try { localStorage.setItem("tema", t); } catch { /* armazenamento indisponível */ }
-  if (estado.vista === "painel") { pintarMapa(); mapa.agendar(); }
+  if (estado.vista === "painel") { if (estado.turno === 2) pintarTurno2(false); else pintarMapa(); mapa.agendar(); }
 }
 
 // ------------------------------------------------------------------ início
