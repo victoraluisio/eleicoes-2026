@@ -3,10 +3,13 @@
 Fonte: https://resultados.tse.jus.br (mesma API do app "Resultados" do TSE).
 Saída: dados/brutos/api/  (JSON original, sem tratamento) e dados/brutos/fotos/.
 
-Uso:  python scripts/01_baixar_api.py
+Uso:  python scripts/01_baixar_api.py              (baixa só o que falta)
+      python scripts/01_baixar_api.py --atualizar  (baixa de novo resultados e configs;
+                                                    o TSE corrige totais dias depois)
 """
 import gzip
 import json
+import sys
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -31,8 +34,11 @@ CARGOS = {1: ELE_FED, 3: ELE_EST, 5: ELE_EST, 6: ELE_EST, 7: ELE_EST, 8: ELE_EST
 IBGE = "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR"
 
 
-def baixar(url: str, destino: Path, tentativas: int = 4) -> bool:
-    if destino.exists() and destino.stat().st_size > 0:
+ATUALIZAR = "--atualizar" in sys.argv
+
+
+def baixar(url: str, destino: Path, tentativas: int = 4, forcar: bool = False) -> bool:
+    if not forcar and destino.exists() and destino.stat().st_size > 0:
         return True
     destino.parent.mkdir(parents=True, exist_ok=True)
     for i in range(tentativas):
@@ -83,15 +89,15 @@ def main():
     t0 = time.time()
 
     # 1) configuração (eleições + tabela de municípios TSE -> IBGE)
-    baixar(f"{BASE}/comum/config/ele-c.json", API / "ele-c.json")
+    baixar(f"{BASE}/comum/config/ele-c.json", API / "ele-c.json", forcar=ATUALIZAR)
     for ele in (ELE_FED, ELE_EST):
         baixar(f"{BASE}/{CICLO}/{ele}/config/mun-e{ele:06d}-cm.json",
-               API / f"mun-e{ele:06d}-cm.json")
+               API / f"mun-e{ele:06d}-cm.json", forcar=ATUALIZAR)
 
     # 2) resultados por abrangência (Brasil, exterior, UFs)
     jobs = list(arquivos_resultado())
     with ThreadPoolExecutor(8) as ex:
-        ok = sum(ex.map(lambda j: baixar(*j), jobs))
+        ok = sum(ex.map(lambda j: baixar(*j, forcar=ATUALIZAR), jobs))
     print(f"resultados: {ok}/{len(jobs)} arquivos")
 
     # 2b) Presidente por município — o CSV de dados abertos de 2026 não traz o cargo 1,
@@ -105,7 +111,7 @@ def main():
             nome = f'{abr["cd"]}{m["cd"]}-c0001-e{ELE_FED:06d}-u.json'
             jobs.append((f"{BASE}/{CICLO}/{ELE_FED}/dados/{abr['cd']}/{nome}", API / "mun" / nome))
     with ThreadPoolExecutor(12) as ex:
-        ok = sum(ex.map(lambda j: baixar(*j), jobs))
+        ok = sum(ex.map(lambda j: baixar(*j, forcar=ATUALIZAR), jobs))
     print(f"presidente por município: {ok}/{len(jobs)}")
 
     # 3) fotos: todos os candidatos majoritários + deputados eleitos

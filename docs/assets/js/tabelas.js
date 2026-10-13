@@ -102,12 +102,13 @@ export async function montarTabelas(estado) {
   selUF.value = uf;
 
   const nomeCargo = uf === "df" && cargo === 7 ? "Deputado Distrital" : info.nome;
-  if (cargo === 1) {
-    sub.textContent = "Presidente";
+  if (estado.turno === 2) {
+    // zonas vêm do CSV de dados abertos, que o TSE publica dias depois da eleição
+    sub.textContent = `${info.nome} · 2º turno`;
     selMun.replaceChildren();
     corpo.replaceChildren(el("div", { class: "tabela-vazia" },
-      "O TSE ainda não publicou a votação para Presidente por zona eleitoral nos dados abertos de 2026. ",
-      el("br"), "Escolha Governador, Senador ou Deputados nas abas acima."));
+      "As tabelas por zona do 2º turno saem quando o TSE publicar os dados abertos, alguns dias após a eleição. ",
+      el("br"), "Durante a apuração, acompanhe pelo Painel."));
     linhasAtuais = []; colunasAtuais = [];
     return;
   }

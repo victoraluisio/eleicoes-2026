@@ -233,7 +233,8 @@ def main():
             if abr["cd"] == "zz":
                 continue
             tse_para_ibge[int(m["cd"])] = m["cdi"]
-            municipios[m["cdi"]] = [titulo(m["nm"]), abr["cd"].upper(), 1 if m.get("c") == "s" else 0]
+            # [nome, UF, capital, código TSE] — o código TSE nomeia os arquivos da API (modo ao vivo)
+            municipios[m["cdi"]] = [titulo(m["nm"]), abr["cd"].upper(), 1 if m.get("c") == "s" else 0, m["cd"]]
 
     df = pd.read_csv(VOTOS_MUN)
     df["CD_CARGO"] = df.CD_CARGO.replace({8: 7})   # DF: distrital ocupa o lugar do estadual no mapa
@@ -263,7 +264,8 @@ def main():
             if c.get("dvt", "Válido").startswith("Válido") and num(c["vap"]) > 0:
                 linhas_pres.append({"ibge": ibge, "CD_CARGO": 1, "NR_CANDIDATO": num(c["n"]),
                                     "VOTOS": num(c["vap"]), "partido": par["sg"]})
-    df = pd.concat([df, pd.DataFrame(linhas_pres)], ignore_index=True)
+    # Presidente por município vem só da API (o CSV de 13/10 também traz o cargo 1)
+    df = pd.concat([df[df.CD_CARGO != 1], pd.DataFrame(linhas_pres)], ignore_index=True)
 
     tamanhos = {}
     tamanhos["mun/participacao.json"] = salvar(OUT / "mun" / "participacao.json", participacao)

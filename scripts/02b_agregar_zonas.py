@@ -7,8 +7,8 @@ Formato por UF e cargo:
   zonas: [[zona, ibge, [num, votos, num, votos, ...]], ...]   (majoritários: por candidato)
   zonas: [[zona, ibge, [idxPartido, votos, ...]], ...]        (deputados: por partido)
 
-Presidente não entra: o CSV de dados abertos de 2026 não traz o cargo 1 e a API
-de resultados não publica recorte por zona.
+Presidente vem do arquivo _BR.csv (publicado pelo TSE na versão de 13/10/2026);
+os demais cargos, do _BRASIL.csv.
 
 Uso:  python scripts/02b_agregar_zonas.py
 """
@@ -34,11 +34,21 @@ def main():
     tse_para_ibge = {int(m["cd"]): m["cdi"] for a in cm["abr"] for m in a["mu"]}
 
     partes = []
-    with zipfile.ZipFile(ZIP) as z, z.open("votacao_candidato_munzona_2026_BRASIL.csv") as f:
-        for bloco in pd.read_csv(f, sep=";", encoding="latin1", usecols=COLUNAS, chunksize=2_000_000):
-            bloco = bloco[bloco.NM_TIPO_DESTINACAO_VOTOS == "Válido"]
-            partes.append(bloco.groupby(["SG_UF", "CD_CARGO", "NR_ZONA", "CD_MUNICIPIO", "NR_CANDIDATO"],
-                                        as_index=False).QT_VOTOS_NOMINAIS_VALIDOS.sum())
+    with zipfile.ZipFile(ZIP) as z:
+        arquivos = [n for n in ("votacao_candidato_munzona_2026_BRASIL.csv", "votacao_candidato_munzona_2026_BR.csv")
+                    if n in z.namelist()]
+        for nome in arquivos:
+            with z.open(nome) as f:
+                for bloco in pd.read_csv(f, sep=";", encoding="latin1", usecols=COLUNAS, chunksize=2_000_000):
+                    bloco = bloco[bloco.NM_TIPO_DESTINACAO_VOTOS == "Válido"]
+                    # cada cargo vem de um só arquivo: Presidente do _BR, o resto do _BRASIL
+                    # (a versão de 13/10 do _BRASIL também traz Presidente — evita contar duas vezes)
+                    if nome.endswith("_BR.csv"):
+                        bloco = bloco[bloco.CD_CARGO == 1]
+                    else:
+                        bloco = bloco[bloco.CD_CARGO != 1]
+                    partes.append(bloco.groupby(["SG_UF", "CD_CARGO", "NR_ZONA", "CD_MUNICIPIO", "NR_CANDIDATO"],
+                                                as_index=False).QT_VOTOS_NOMINAIS_VALIDOS.sum())
     df = (pd.concat(partes).groupby(["SG_UF", "CD_CARGO", "NR_ZONA", "CD_MUNICIPIO", "NR_CANDIDATO"],
                                     as_index=False).QT_VOTOS_NOMINAIS_VALIDOS.sum()
           .rename(columns={"QT_VOTOS_NOMINAIS_VALIDOS": "VOTOS"}))
@@ -54,7 +64,7 @@ def main():
         out = {}
         for cargo, g in g_uf.groupby("CD_CARGO"):
             linhas = []
-            if cargo in (3, 5):
+            if cargo in (1, 3, 5):
                 chave = "NR_CANDIDATO"
                 rot = None
             else:
