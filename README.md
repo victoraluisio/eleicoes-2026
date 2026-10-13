@@ -2,6 +2,8 @@
 
 Painel interativo com o resultado oficial do 1º turno das eleições gerais de 4 de outubro de 2026 — Presidente, Governador, Senador, Deputado Federal e Deputado Estadual/Distrital — do país ao município.
 
+**[Abrir o painel →](https://victoraluisio.github.io/eleicoes-2026/)**
+
 **Dados:** Tribunal Superior Eleitoral (TSE) · **Malha territorial:** IBGE
 
 ## O que o painel mostra
@@ -57,4 +59,4 @@ Python (pandas) para coleta e tratamento · D3.js + Canvas para o mapa e os grá
 
 ---
 
-Desenvolvido por **Aluisio Victor**.
+Desenvolvido por **Aluisio Victor** · [Ver o painel](https://victoraluisio.github.io/eleicoes-2026/)
