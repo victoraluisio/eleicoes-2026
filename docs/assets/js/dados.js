@@ -1,4 +1,4 @@
-import { carregar, UF_POR_IBGE, REGIOES } from "./util.js?v=202610251136";
+import { carregar, UF_POR_IBGE, REGIOES } from "./util.js?v=202610251223";
 
 const BASE = "data";
 

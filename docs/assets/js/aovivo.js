@@ -6,7 +6,7 @@
 //  - a cada ciclo: arquivo do Brasil + um por UF (~3 KB cada)
 //  - UF aberta: arquivo de progresso por município (…-ab.json) e, a partir dele,
 //    só os municípios cuja apuração avançou desde o último ciclo
-import { UFS, REGIOES } from "./util.js?v=202610251136";
+import { UFS, REGIOES } from "./util.js?v=202610251223";
 
 const BASE = "https://resultados.tse.jus.br/oficial/ele2026";
 const INTERVALO = 30_000;
