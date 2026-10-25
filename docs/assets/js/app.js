@@ -15,8 +15,11 @@ const estado = { turno: 1, cargo: 1, reg: null, uf: null, mun: null, partido: nu
 
 function lerURL() {
   const q = new URLSearchParams(location.hash.slice(1));
-  estado.turno = q.get("t") === "2" ? 2 : 1;
   const cargo = +q.get("cargo");
+  // 2º turno é a abertura padrão; links antigos de cargos/vistas que só existem no 1º turno seguem nele
+  const t = q.get("t");
+  const so1T = [5, 6, 7].includes(cargo) || q.get("painel") === "rank" || q.get("vista") === "tabelas" || q.get("p");
+  estado.turno = t === "1" ? 1 : t === "2" ? 2 : so1T ? 1 : 2;
   estado.cargo = CARGOS.some((c) => c.id === cargo) ? cargo : 1;
   estado.uf = UFS[q.get("uf")] ? q.get("uf") : null;
   estado.reg = estado.uf ? REGIAO_DA_UF[estado.uf] : REGIOES[q.get("reg")] ? q.get("reg") : null;
@@ -29,7 +32,7 @@ function lerURL() {
 
 function escreverURL() {
   const q = new URLSearchParams();
-  if (estado.turno === 2) q.set("t", "2");
+  q.set("t", estado.turno);
   q.set("cargo", estado.cargo);
   if (estado.reg && !estado.uf) q.set("reg", estado.reg);
   if (estado.uf) q.set("uf", estado.uf);
@@ -548,6 +551,8 @@ function atualizarControles() {
   document.querySelectorAll(".aba").forEach((b) => (b.hidden = t2 && ![1, 3].includes(+b.dataset.cargo)));
   for (const s of [".campo-partido", ".campo-busca", ".seg-painel"]) $(s).hidden = t2;
   document.body.classList.toggle("turno2", t2);
+  $(".marca-txt small").textContent = t2 ? "2º turno · 25 de outubro" : "1º turno · 4 de outubro";
+  document.title = t2 ? "Eleições 2026 · 2º turno ao vivo" : "Eleições 2026 · Painel do 1º turno";
   if (!t2) $("#selo-vivo").hidden = true;
 
   const { reg } = estado;
