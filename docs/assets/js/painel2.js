@@ -1,9 +1,9 @@
 // Painel lateral do 2º turno (modo ao vivo).
 // Cada pintura guarda os valores mostrados; na seguinte (30 s depois), barras e números
 // partem do valor anterior em vez de zero — a tela "anda" junto com a apuração.
-import { corPartido } from "./cores.js?v=202610251132";
-import { bloco as bloco1T } from "./dados.js?v=202610251132";
-import { el, int, pct, compacto, contar, iniciais, UFS, REGIOES, reduzMovimento } from "./util.js?v=202610251132";
+import { corPartido } from "./cores.js?v=202610251136";
+import { bloco as bloco1T } from "./dados.js?v=202610251136";
+import { el, int, pct, compacto, contar, iniciais, UFS, REGIOES, reduzMovimento } from "./util.js?v=202610251136";
 
 const anterior = new Map();   // chave -> último valor mostrado
 

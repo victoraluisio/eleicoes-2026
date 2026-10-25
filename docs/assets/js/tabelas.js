@@ -1,6 +1,6 @@
-import { corPartido } from "./cores.js?v=202610251132";
-import { db, bloco } from "./dados.js?v=202610251132";
-import { carregar, el, int, pct, semAcento, UFS, REGIOES, cargoInfo } from "./util.js?v=202610251132";
+import { corPartido } from "./cores.js?v=202610251136";
+import { db, bloco } from "./dados.js?v=202610251136";
+import { carregar, el, int, pct, semAcento, UFS, REGIOES, cargoInfo } from "./util.js?v=202610251136";
 
 const MAX_COLUNAS = { maj: 6, prop: 8 };
 const ordem = { col: "zona", desc: false };

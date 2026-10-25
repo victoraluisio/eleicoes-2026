@@ -1,14 +1,14 @@
-import { Mapa } from "./mapa.js?v=202610251132";
-import { corPartido, intensidade } from "./cores.js?v=202610251132";
+import { Mapa } from "./mapa.js?v=202610251136";
+import { corPartido, intensidade } from "./cores.js?v=202610251136";
 import {
   db, carregarBase, garantirCargo, garantirUF, resultadoMun, fatiaPartidoMun, ufDoMun, partidosOrdenados, bloco,
   blocoRegiao, fatiaPartidoRegiao, fatiaPartidoUF, rankingEscopo,
-} from "./dados.js?v=202610251132";
-import { montarPainel, montarKPIs, montarRanking, desenharKPIs } from "./painel.js?v=202610251132";
-import { montarPainel2, montarPlacar } from "./painel2.js?v=202610251132";
-import { AoVivo, SIMULANDO, agregar } from "./aovivo.js?v=202610251132";
-import { montarTabelas, baixarCSV } from "./tabelas.js?v=202610251132";
-import { CARGOS, UFS, REGIOES, REGIAO_DA_UF, cargoInfo, el, int, pct, compacto, semAcento } from "./util.js?v=202610251132";
+} from "./dados.js?v=202610251136";
+import { montarPainel, montarKPIs, montarRanking, desenharKPIs } from "./painel.js?v=202610251136";
+import { montarPainel2, montarPlacar } from "./painel2.js?v=202610251136";
+import { AoVivo, SIMULANDO, agregar } from "./aovivo.js?v=202610251136";
+import { montarTabelas, baixarCSV } from "./tabelas.js?v=202610251136";
+import { CARGOS, UFS, REGIOES, REGIAO_DA_UF, cargoInfo, el, int, pct, compacto, semAcento } from "./util.js?v=202610251136";
 
 // ------------------------------------------------------------------ estado + URL
 const estado = { turno: 1, cargo: 1, reg: null, uf: null, mun: null, partido: null, modo: "vencedor", vista: "painel", painel: "resumo" };
@@ -600,9 +600,9 @@ function escolherTema(t) {
 
 // ------------------------------------------------------------------ início
 async function iniciar() {
-  // tema claro por padrão; o escuro só entra se a pessoa escolher
-  let tema = "light";
-  try { tema = localStorage.getItem("tema") || "light"; } catch { /* sem armazenamento */ }
+  // tema "Brasil" por padrão; a escolha de cada visitante (claro/escuro) fica salva
+  let tema = "brasil";
+  try { tema = localStorage.getItem("tema") || "brasil"; } catch { /* sem armazenamento */ }
   aplicarTema(tema);
   await carregarBase();
   mapa = new Mapa($("#mapa"), {
