@@ -1,14 +1,14 @@
-import { Mapa } from "./mapa.js";
-import { corPartido, intensidade } from "./cores.js";
+import { Mapa } from "./mapa.js?v=202610251132";
+import { corPartido, intensidade } from "./cores.js?v=202610251132";
 import {
   db, carregarBase, garantirCargo, garantirUF, resultadoMun, fatiaPartidoMun, ufDoMun, partidosOrdenados, bloco,
   blocoRegiao, fatiaPartidoRegiao, fatiaPartidoUF, rankingEscopo,
-} from "./dados.js";
-import { montarPainel, montarKPIs, montarRanking, desenharKPIs } from "./painel.js";
-import { montarPainel2, montarPlacar } from "./painel2.js";
-import { AoVivo, SIMULANDO, agregar } from "./aovivo.js";
-import { montarTabelas, baixarCSV } from "./tabelas.js";
-import { CARGOS, UFS, REGIOES, REGIAO_DA_UF, cargoInfo, el, int, pct, compacto, semAcento } from "./util.js";
+} from "./dados.js?v=202610251132";
+import { montarPainel, montarKPIs, montarRanking, desenharKPIs } from "./painel.js?v=202610251132";
+import { montarPainel2, montarPlacar } from "./painel2.js?v=202610251132";
+import { AoVivo, SIMULANDO, agregar } from "./aovivo.js?v=202610251132";
+import { montarTabelas, baixarCSV } from "./tabelas.js?v=202610251132";
+import { CARGOS, UFS, REGIOES, REGIAO_DA_UF, cargoInfo, el, int, pct, compacto, semAcento } from "./util.js?v=202610251132";
 
 // ------------------------------------------------------------------ estado + URL
 const estado = { turno: 1, cargo: 1, reg: null, uf: null, mun: null, partido: null, modo: "vencedor", vista: "painel", painel: "resumo" };

@@ -1,9 +1,9 @@
-import { corPartido } from "./cores.js";
+import { corPartido } from "./cores.js?v=202610251132";
 import {
   db, bloco, resultadoMun, garantirUF, fatiaPartidoUF, fatiaPartidoMun, vencedorUF, blocoRegiao, fatiaPartidoRegiao,
   rankingEscopo,
-} from "./dados.js";
-import { el, int, pct, compacto, contar, iniciais, semAcento, UFS, REGIOES, cargoInfo, reduzMovimento } from "./util.js";
+} from "./dados.js?v=202610251132";
+import { el, int, pct, compacto, contar, iniciais, semAcento, UFS, REGIOES, cargoInfo, reduzMovimento } from "./util.js?v=202610251132";
 
 const SIT = {
   eleito: ["Eleito", "badge-eleito"],

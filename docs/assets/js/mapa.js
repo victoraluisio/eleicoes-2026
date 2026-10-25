@@ -1,4 +1,4 @@
-import { reduzMovimento, UF_POR_IBGE, REGIOES, REGIAO_DA_UF } from "./util.js";
+import { reduzMovimento, UF_POR_IBGE, REGIOES, REGIAO_DA_UF } from "./util.js?v=202610251132";
 
 // Mapa em Canvas: 5.570 polígonos em SVG travavam a animação (<1 fps no zoom).
 // Aqui cada município vira um Path2D pré-projetado; zoom = matriz de transformação,

@@ -26,6 +26,7 @@ Painel interativo com o resultado oficial do 1º turno das eleições gerais de 
 | 2b | `scripts/02b_agregar_zonas.py` | Gera as tabelas por zona eleitoral (todos os cargos) |
 | 3 | `scripts/03_gerar_dados_site.py` | Monta os JSONs enxutos que o site consome (`docs/data/`) |
 | 4 | `scripts/04_mapas.py` | Simplifica a malha municipal e gera o TopoJSON (estados e municípios com arcos compartilhados) |
+| 5 | `scripts/05_versionar_assets.py` | Carimba uma versão nos CSS/JS (`?v=`) para os navegadores não usarem cópia antiga — rodar antes de cada publicação |
 
 ### Validação
 
