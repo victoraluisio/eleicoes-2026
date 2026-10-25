@@ -167,3 +167,34 @@ export function montarPainel2(alvo, estado, av, { ir }) {
   if (!suave) blocos.forEach((b, i) => { b.classList.add("entra"); b.style.setProperty("--d", `${i * 70}ms`); });
   alvo.replaceChildren(...blocos);
 }
+
+// ------------------------------------------------------------------ placar do topo (celular)
+/**
+ * Placar compacto de Presidente no Brasil: os dois primeiros, percentual, votos e
+ * barra dividida. Serve aos dois turnos (no 1º, mostra os dois mais votados).
+ */
+export function montarPlacar(alvo, b, { turno, aoVivo = false, erro = false, aoClicar } = {}) {
+  if (!b || b.candidatos.length < 2) { alvo.replaceChildren(); return; }
+  const [a, z] = b.candidatos;
+  const chave = `placar|${turno}`;
+  const t = b.totais;
+  const lado = (c, pos) => el("div", { class: `placar-cand placar-${pos}` },
+    avatar(c, "sm"),
+    el("div", { class: "placar-info" },
+      el("strong", { class: "placar-nome" }, c.nome),
+      el("span", { class: "placar-meta" }, chip(c.partido), el("span", {}, num(`${chave}|${c.n}|v`, c.votos, compacto)))),
+    el("span", { class: "placar-pct" }, num(`${chave}|${c.n}|pct`, c.pct, pct)));
+  const status = turno === 2
+    ? (erro ? "sem conexão" : t.finalizado && t.pApuradas >= 100 ? "resultado final" : `${pct(t.pApuradas)} apurado`)
+    : "1º turno · final";
+  alvo.replaceChildren(el("button", { type: "button", class: "placar", onclick: aoClicar, "aria-label": "Ver Presidente no Brasil" },
+    el("div", { class: "placar-topo" },
+      el("span", { class: "placar-tit" }, aoVivo && !erro && !(t.finalizado && t.pApuradas >= 100) ? el("i", { class: "placar-vivo" }) : null,
+        `Presidente · Brasil · ${turno}º turno`),
+      el("span", { class: "placar-status" }, status)),
+    el("div", { class: "placar-linha" }, lado(a, "a"), lado(z, "b")),
+    el("div", { class: "duelo-barra placar-barra" },
+      largura(`${chave}|ba`, a.pct, corPartido(a.partido)),
+      largura(`${chave}|bz`, z.pct, corPartido(z.partido)),
+      turno === 2 ? el("span", { class: "duelo-meio" }) : null)));
+}

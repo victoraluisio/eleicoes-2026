@@ -5,7 +5,7 @@ import {
   blocoRegiao, fatiaPartidoRegiao, fatiaPartidoUF, rankingEscopo,
 } from "./dados.js";
 import { montarPainel, montarKPIs, montarRanking, desenharKPIs } from "./painel.js";
-import { montarPainel2 } from "./painel2.js";
+import { montarPainel2, montarPlacar } from "./painel2.js";
 import { AoVivo, SIMULANDO, agregar } from "./aovivo.js";
 import { montarTabelas, baixarCSV } from "./tabelas.js";
 import { CARGOS, UFS, REGIOES, REGIAO_DA_UF, cargoInfo, el, int, pct, compacto, semAcento } from "./util.js";
@@ -93,8 +93,11 @@ async function ir(mudancas = {}) {
     || estado.partido !== antes.partido || estado.modo !== antes.modo;
   if (mudouMapa) pintarMapa();
   montarKPIs($("#kpis"), estado);
+  montarPlacar($("#placar"), bloco(1, "br"), { turno: 1, aoClicar: irPresidenteBrasil });
   await atualizarPainel();
 }
+
+const irPresidenteBrasil = () => ir({ cargo: 1, reg: null, uf: null, mun: null });
 
 function subir() {
   if (estado.mun) ir({ mun: null });
@@ -139,6 +142,7 @@ function pintarTurno2(mudouTela) {
   $("#painel-sub").textContent = `${cargoInfo(cargo).nome} · 2º turno · `
     + (av.erro && hora ? `sem resposta do TSE — mostrando dados das ${hora}` : hora ? `atualizado às ${hora}` : "conectando ao TSE…");
   montarPainel2($("#painel-corpo"), estado, av, { ir });
+  montarPlacar($("#placar"), av.bloco(1, {}), { turno: 2, aoVivo: true, erro: !!av.erro, aoClicar: irPresidenteBrasil });
   atualizarSelo(b);
 }
 
@@ -149,6 +153,20 @@ function atualizarSelo(b) {
   const final = b?.totais.finalizado && b.totais.pApuradas >= 100;
   selo.className = `selo-vivo ${av?.erro ? "erro" : final ? "final" : ""}`;
   $("#selo-vivo-txt").textContent = SIMULANDO ? "Simulação" : av?.erro ? "Sem conexão" : final ? "Resultado final" : "Ao vivo";
+}
+
+// Contador "próxima atualização em Ns" no selo; tocar no selo busca na hora
+let atualizandoAgora = false;
+setInterval(() => {
+  if (estado.turno !== 2 || !av?.ligado) return;
+  const n = av.segundosParaProxima();
+  $("#selo-vivo-cont").textContent = atualizandoAgora || av.rodando ? "· atualizando…" : n != null ? `· ${n}s` : "";
+}, 1000);
+
+async function atualizarAgora() {
+  if (!av?.ligado || atualizandoAgora) return;
+  atualizandoAgora = true;
+  try { await av.atualizarAgora(); } finally { atualizandoAgora = false; }
 }
 
 function corDoMunT2(ibge) {
@@ -516,6 +534,7 @@ function montarControles() {
 
   $("#btn-recentrar").onclick = () => mapa.resetarZoomManual();
   $("#btn-voltar").onclick = subir;
+  $("#selo-vivo").onclick = atualizarAgora;
   $("#btn-zoom-mais").onclick = () => mapa.zoomPor(1.6);
   $("#btn-zoom-menos").onclick = () => mapa.zoomPor(1 / 1.6);
   const menuTema = $("#tema-opcoes"), btnTema = $("#btn-tema");

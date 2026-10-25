@@ -25,7 +25,9 @@
       </a>
       <nav id="cargos" class="abas" role="tablist" aria-label="Cargo"></nav>
       <div class="topo-dir">
-        <span id="selo-vivo" class="selo-vivo" hidden><i aria-hidden="true"></i><span id="selo-vivo-txt">Ao vivo</span></span>
+        <button id="selo-vivo" class="selo-vivo" type="button" hidden title="Atualiza sozinho a cada 30 s — toque para atualizar agora">
+          <i aria-hidden="true"></i><span id="selo-vivo-txt">Ao vivo</span><span id="selo-vivo-cont" class="selo-cont"></span>
+        </button>
         <div class="seg seg-turno" role="group" aria-label="Turno">
           <button type="button" data-turno="1">1º turno</button>
           <button type="button" data-turno="2">2º turno</button>
@@ -49,6 +51,7 @@
 
     <!-- ===================== VISTA PAINEL ===================== -->
     <main id="vista-painel" class="conteudo">
+      <section id="placar" class="placar-wrap" aria-label="Placar de Presidente no Brasil"></section>
       <section id="kpis" class="kpis" aria-label="Indicadores"></section>
 
       <section class="card card-mapa" aria-label="Mapa">

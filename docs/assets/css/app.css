@@ -681,3 +681,45 @@ button.mini:hover { border-color: var(--linha-forte); transform: translateY(-1px
   .duelo-pct { font-size: 26px; }
   .topo-dir { flex-wrap: wrap; justify-content: flex-end; }
 }
+
+/* ================================================================ placar do topo (só no celular) */
+.placar-wrap { display: none; }
+.placar {
+  width: 100%; display: flex; flex-direction: column; gap: 10px; text-align: left;
+  padding: 14px 16px 16px; border: 0; border-radius: var(--raio); background: var(--card); box-shadow: var(--sombra-suave);
+}
+.placar-topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.placar-tit { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 800; letter-spacing: -.01em; }
+.placar-vivo { width: 8px; height: 8px; border-radius: 50%; background: #c81e3a; animation: pulso-vivo 1.4s ease-in-out infinite; }
+.placar-status { font-size: 11.5px; font-weight: 700; color: var(--tinta-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.placar-linha { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.placar-cand { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 9px; align-items: center; min-width: 0; }
+.placar-cand .avatar { grid-row: 1 / 3; }
+.placar-b { direction: rtl; }
+.placar-b > * { direction: ltr; }
+.placar-b .placar-info, .placar-b .placar-pct { text-align: right; }
+.placar-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.placar-nome { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.placar-meta { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--tinta-3); font-weight: 600; font-variant-numeric: tabular-nums; }
+.placar-b .placar-meta { justify-content: flex-end; }
+.placar-pct { grid-column: 2; font-size: 26px; font-weight: 600; letter-spacing: -.04em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.placar-barra { height: 10px; }
+
+@media (max-width: 1024px) {
+  /* celular/tablet: placar → mapa → indicadores → painel */
+  .placar-wrap { display: block; order: 0; }
+  .card-mapa { order: 1; }
+  .kpis { order: 2; }
+  .painel { order: 3; }
+  .vista-tabelas-ativa .placar-wrap { display: none; }
+}
+button.selo-vivo { cursor: pointer; font-family: inherit; }
+button.selo-vivo:hover { filter: brightness(.97); }
+button.selo-vivo:active { transform: scale(.97); }
+.selo-cont { font-weight: 700; letter-spacing: 0; text-transform: none; opacity: .8; font-variant-numeric: tabular-nums; min-width: 34px; }
+@media (max-width: 520px) {
+  /* cabeçalho no celular: selo + turno numa linha, vista + tema na outra — sem rolagem lateral */
+  .topo-dir { width: 100%; flex-wrap: wrap; justify-content: flex-start; gap: 8px; margin-left: 0; }
+  .seg-turno button, .seg-vista button { padding: 8px 12px; }
+  .tema-menu { margin-left: auto; }
+}

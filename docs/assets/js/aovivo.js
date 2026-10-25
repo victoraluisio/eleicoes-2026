@@ -128,11 +128,24 @@ export class AoVivo {
       this.ufsCargo[3] = cm.abr.map((a) => a.cd).filter((uf) => UFS[uf]);
     } catch { this.ufsCargo[3] = []; }
     this.ligado = true;
-    await this.ciclo();
-    this.timer = setInterval(() => { if (!document.hidden) this.ciclo(); }, INTERVALO);
+    await this.ciclo();   // o próprio ciclo agenda a próxima busca
   }
 
-  parar() { this.ligado = false; clearInterval(this.timer); }
+  parar() { this.ligado = false; clearTimeout(this.timer); this.proxima = null; }
+
+  /** Próxima busca em INTERVALO; com a aba escondida, só reagenda (economiza dados). */
+  agendar() {
+    clearTimeout(this.timer);
+    if (!this.ligado) return;
+    this.proxima = Date.now() + INTERVALO;
+    this.timer = setTimeout(() => (document.hidden ? this.agendar() : this.ciclo()), INTERVALO);
+  }
+
+  /** Botão "atualizar agora". */
+  atualizarAgora() { return this.ciclo(); }
+
+  /** Segundos até a próxima busca (para o contador na tela). */
+  segundosParaProxima() { return this.proxima ? Math.max(0, Math.ceil((this.proxima - Date.now()) / 1000)) : null; }
 
   /** Escopo que a tela está mostrando — decide quais municípios vale a pena buscar. */
   focar(cargo, uf) {
@@ -156,6 +169,10 @@ export class AoVivo {
           } catch (e) { falhas.push(ab); }
         });
         if (falhas.length === alvos.length) throw new Error("nenhuma resposta do TSE");
+        // o placar nacional de Presidente (topo no celular) aparece em qualquer cargo
+        if (cargo !== 1) {
+          try { this.dados[1].br = interpretar(await buscar(urlCargo(1, "br"))); } catch { /* mantém o anterior */ }
+        }
         this.ultimoOk = new Date();
         this.erro = null;
         // pinta já com Brasil/UFs; os municípios completam o mapa em seguida
@@ -168,7 +185,7 @@ export class AoVivo {
       }
       this.aoAtualizar?.();
     })();
-    try { await this.rodando; } finally { this.rodando = null; }
+    try { await this.rodando; } finally { this.rodando = null; this.agendar(); }
   }
 
   async municipiosDa(cargo, uf) {
